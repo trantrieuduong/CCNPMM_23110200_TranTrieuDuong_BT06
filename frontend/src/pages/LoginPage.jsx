@@ -48,8 +48,20 @@ const LoginPage = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 text-red-700 text-sm animate-pulse">
-            {error}
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 text-red-700 text-sm rounded-r-xl">
+            {error === 'TÀI_KHOẢN_CHƯA_KÍCH_HOẠT' ? (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold text-red-800">Tài khoản của bạn chưa được xác thực địa chỉ email.</span>
+                <Link
+                  to={`/verify-email?email=${encodeURIComponent(email)}`}
+                  className="inline-flex items-center text-xs font-bold text-red-600 hover:text-red-700 hover:underline"
+                >
+                  Xác thực ngay bây giờ &rarr;
+                </Link>
+              </div>
+            ) : (
+              error
+            )}
           </div>
         )}
 
@@ -74,6 +86,12 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            
+            <div className="flex justify-end pt-1">
+              <Link to="/forgot-password" className="text-xs font-semibold text-zinc-500 hover:text-black hover:underline transition-colors">
+                Quên mật khẩu?
+              </Link>
             </div>
           </div>
 

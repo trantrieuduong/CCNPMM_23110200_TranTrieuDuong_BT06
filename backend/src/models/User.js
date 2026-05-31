@@ -28,6 +28,26 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  addresses: [
+    {
+      fullName: {
+        type: String,
+        required: true,
+      },
+      phoneNumber: {
+        type: String,
+        required: true,
+      },
+      address: {
+        type: String,
+        required: true,
+      },
+      isDefault: {
+        type: Boolean,
+        default: false,
+      }
+    }
+  ]
 });
 
 // Mã hóa mật khẩu trước khi lưu

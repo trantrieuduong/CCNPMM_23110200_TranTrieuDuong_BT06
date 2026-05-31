@@ -104,3 +104,18 @@ exports.handleCancellationRequest = async (req, res, next) => {
   }
 };
 
+// @desc    Lấy thống kê trang tổng quan (Dashboard)
+// @route   GET /api/admin/stats
+// @access  Private/Admin
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const stats = await adminService.getDashboardStats();
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
-import { Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Image as ImageIcon, Upload, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -17,33 +17,61 @@ const ProductsPage = () => {
     price: 0,
     discountPrice: 0,
     stock: 0,
-    category: '',
-    isFeatured: false,
-    tags: ''
+    category: ''
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
 
+  // Thêm state cho bộ lọc và phân trang
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  const fetchData = async () => {
+  const fetchCategories = async () => {
+    try {
+      const { data } = await api.get('/categories');
+      setCategories(data.data);
+    } catch (error) {
+      console.error('Lỗi tải danh mục:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
     try {
       setLoading(true);
-      const [resProd, resCat] = await Promise.all([
-        api.get('/products?limit=100'),
-        api.get('/categories')
-      ]);
-      setProducts(resProd.data.data);
-      setCategories(resCat.data.data);
+      const { data } = await api.get('/products', {
+        params: {
+          page,
+          limit: 10,
+          search,
+          category
+        }
+      });
+      setProducts(data.data);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
-      alert('Lỗi tải dữ liệu: ' + error.message);
+      alert('Lỗi tải sản phẩm: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchCategories();
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [page, search, category]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput);
+  };
 
   const handleOpenModal = (product = null) => {
     if (product) {
@@ -54,9 +82,7 @@ const ProductsPage = () => {
         price: product.price,
         discountPrice: product.discountPrice || 0,
         stock: product.stock,
-        category: product.category?._id || '',
-        isFeatured: product.isFeatured,
-        tags: product.tags?.join(', ') || ''
+        category: product.category?._id || ''
       });
     } else {
       setEditingProduct(null);
@@ -66,9 +92,7 @@ const ProductsPage = () => {
         price: 0,
         discountPrice: 0,
         stock: 0,
-        category: '',
-        isFeatured: false,
-        tags: ''
+        category: ''
       });
     }
     setSelectedFiles([]);
@@ -96,7 +120,7 @@ const ProductsPage = () => {
       } else {
         await api.post('/products', data);
       }
-      fetchData();
+      fetchProducts();
       setModalOpen(false);
     } catch (error) {
       alert('Lỗi: ' + (error.response?.data?.message || error.message));
@@ -109,7 +133,7 @@ const ProductsPage = () => {
     if (window.confirm('Xóa sản phẩm này?')) {
       try {
         await api.delete(`/products/${id}`);
-        fetchData();
+        fetchProducts();
       } catch (error) {
         alert('Lỗi: ' + error.message);
       }
@@ -121,7 +145,7 @@ const ProductsPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black tracking-tighter uppercase">Sản phẩm</h1>
-          <p className="text-gray-500 text-sm">Kho hàng hiện có {products.length} mẫu giày</p>
+          <p className="text-gray-500 text-sm font-medium">Kho hàng hiện có {products.length} mẫu giày</p>
         </div>
         <button 
           onClick={() => handleOpenModal()}
@@ -132,10 +156,39 @@ const ProductsPage = () => {
         </button>
       </div>
 
+      {/* Bộ lọc & Điều khiển */}
+      <div className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col md:flex-row items-center gap-4 justify-between">
+        <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
+          <input 
+            type="text" 
+            placeholder="Tìm theo tên hoặc slug..." 
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
+          />
+          <Search size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+        </form>
+
+        <div className="flex items-center space-x-4 w-full md:w-auto">
+          <div className="flex items-center space-x-2">
+            <Filter size={16} className="text-gray-400" />
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Danh mục:</span>
+          </div>
+          <select 
+            value={category} 
+            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+            className="px-4 py-2.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-black text-sm bg-white"
+          >
+            <option value="">Tất cả danh mục</option>
+            {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          </select>
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-red-500" size={40} /></div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden shadow-sm">
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
@@ -164,7 +217,16 @@ const ProductsPage = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-bold text-gray-900">{p.price.toLocaleString()}₫</td>
+                  <td className="px-6 py-4">
+                    {p.discountPrice > 0 ? (
+                      <div>
+                        <div className="font-bold text-red-600">{p.discountPrice.toLocaleString('vi-VN')}₫</div>
+                        <div className="text-xs text-gray-400 line-through mt-0.5">{p.price.toLocaleString('vi-VN')}₫</div>
+                      </div>
+                    ) : (
+                      <div className="font-bold text-gray-900">{p.price.toLocaleString('vi-VN')}₫</div>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${p.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {p.stock} sản phẩm
@@ -181,6 +243,29 @@ const ProductsPage = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Phân trang */}
+          {totalPages > 1 && (
+            <div className="py-4 px-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs font-bold text-gray-500">
+              <span>Trang {page} / {totalPages}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                  disabled={page === 1}
+                  className="p-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 disabled:opacity-30 transition-all"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={page === totalPages}
+                  className="p-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 disabled:opacity-30 transition-all"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -197,11 +282,21 @@ const ProductsPage = () => {
               <label className="block text-xs font-black uppercase text-gray-500 mb-1">Giá gốc (₫)</label>
               <input type="number" required className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-black"
                 value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
+              {formData.price > 0 && (
+                <p className="text-[11px] font-bold text-emerald-600 mt-1 font-mono">
+                  Định dạng: {Number(formData.price).toLocaleString('vi-VN')}₫
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-black uppercase text-gray-500 mb-1">Giá khuyến mãi (₫)</label>
               <input type="number" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-black"
                 value={formData.discountPrice} onChange={(e) => setFormData({...formData, discountPrice: e.target.value})} />
+              {formData.discountPrice > 0 && (
+                <p className="text-[11px] font-bold text-red-600 mt-1 font-mono">
+                  Định dạng: {Number(formData.discountPrice).toLocaleString('vi-VN')}₫
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-black uppercase text-gray-500 mb-1">Số lượng tồn kho</label>

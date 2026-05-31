@@ -29,6 +29,46 @@ const CheckoutPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [createdOrder, setCreatedOrder] = useState(null);
 
+  // State cho Sổ địa chỉ
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+
+  // Tải danh sách địa chỉ của người dùng
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const { data } = await api.get('/users/addresses');
+        const list = data.data || [];
+        setAddresses(list);
+
+        // Tự động điền địa chỉ mặc định nếu có
+        const defaultAddr = list.find(addr => addr.isDefault);
+        if (defaultAddr) {
+          setFormData(prev => ({
+            ...prev,
+            fullName: defaultAddr.fullName,
+            phoneNumber: defaultAddr.phoneNumber,
+            address: defaultAddr.address
+          }));
+          setSelectedAddressId(defaultAddr._id);
+        } else if (list.length > 0) {
+          // Hoặc điền địa chỉ đầu tiên nếu không có mặc định
+          setFormData(prev => ({
+            ...prev,
+            fullName: list[0].fullName,
+            phoneNumber: list[0].phoneNumber,
+            address: list[0].address
+          }));
+          setSelectedAddressId(list[0]._id);
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải sổ địa chỉ tại checkout:', error);
+      }
+    };
+
+    fetchAddresses();
+  }, []);
+
   // Kiểm tra nếu giỏ hàng trống thì chuyển hướng về giỏ hàng (chỉ khi không ở màn hình success)
   useEffect(() => {
     if (!loading && cart.items.length === 0 && !createdOrder) {
@@ -42,6 +82,20 @@ const CheckoutPage = () => {
       ...prev,
       [name]: value
     }));
+    // Bỏ chọn địa chỉ đã lưu nếu người dùng gõ tay chỉnh sửa
+    if (name !== 'note') {
+      setSelectedAddressId('');
+    }
+  };
+
+  const handleSelectAddress = (addr) => {
+    setFormData(prev => ({
+      ...prev,
+      fullName: addr.fullName,
+      phoneNumber: addr.phoneNumber,
+      address: addr.address
+    }));
+    setSelectedAddressId(addr._id);
   };
 
   const handleSubmit = async (e) => {
@@ -144,14 +198,14 @@ const CheckoutPage = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link
               to="/orders"
-              className="px-8 py-4 bg-black text-white hover:bg-red-600 rounded-full font-bold transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center"
+              className="px-8 py-4 bg-black text-white hover:bg-red-600 rounded-full font-bold transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center hover:scale-[1.03] active:scale-[0.97]"
             >
               <FileText size={18} className="mr-2" />
               Xem lịch sử đơn hàng
             </Link>
             <Link
               to="/"
-              className="px-8 py-4 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-full font-bold transition-all duration-300 flex items-center justify-center"
+              className="px-8 py-4 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-full font-bold transition-all duration-300 flex items-center justify-center hover:scale-[1.03] active:scale-[0.97]"
             >
               Tiếp tục mua sắm
             </Link>
@@ -164,7 +218,7 @@ const CheckoutPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="mb-10">
-        <Link to="/cart" className="inline-flex items-center text-sm font-bold text-gray-500 hover:text-black transition-colors mb-4">
+        <Link to="/cart" className="inline-flex items-center text-sm font-bold text-gray-500 hover:text-black transition-all duration-200 mb-4 hover:translate-x-[-4px]">
           <ArrowLeft size={16} className="mr-1.5" /> Quay lại giỏ hàng
         </Link>
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">Thanh toán đơn hàng</h1>
@@ -184,6 +238,40 @@ const CheckoutPage = () => {
             <MapPin size={22} className="mr-2 text-red-500" />
             Thông tin nhận hàng
           </h2>
+
+          {/* Chọn nhanh địa chỉ đã lưu */}
+          {addresses.length > 0 && (
+            <div className="pb-4 border-b border-gray-100">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-wider block mb-3">
+                Chọn nhanh địa chỉ giao hàng đã lưu
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
+                {addresses.map((addr) => (
+                  <div
+                    key={addr._id}
+                    type="button"
+                    onClick={() => handleSelectAddress(addr)}
+                    className={`p-4 rounded-2xl border text-left cursor-pointer transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${
+                      selectedAddressId === addr._id
+                        ? 'border-red-500 bg-red-50/10 ring-1 ring-red-500'
+                        : 'border-gray-100 hover:border-gray-200 bg-gray-50/50 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-gray-900 text-sm truncate pr-2">{addr.fullName}</span>
+                      {addr.isDefault && (
+                        <span className="bg-red-500/10 text-red-600 text-[8px] uppercase font-black px-1.5 py-0.5 rounded-md flex-shrink-0">
+                          Mặc định
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 font-semibold mb-1">{addr.phoneNumber}</div>
+                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed font-medium">{addr.address}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -288,7 +376,7 @@ const CheckoutPage = () => {
           <button
             type="submit"
             disabled={isSubmitting || cart.items.length === 0}
-            className="w-full py-4 bg-black text-white hover:bg-red-600 rounded-full font-bold text-center transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center"
+            className="w-full py-4 bg-black text-white hover:bg-red-600 rounded-full font-bold text-center transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center hover:scale-[1.02] active:scale-[0.98]"
           >
             {isSubmitting ? 'Đang tiến hành đặt hàng...' : `Xác nhận đặt hàng - ${finalTotal.toLocaleString('vi-VN')}₫`}
           </button>

@@ -45,17 +45,6 @@ const productSchema = new mongoose.Schema({
     ref: 'Category',
     required: true,
   },
-  isFeatured: {
-    type: Boolean,
-    default: false,
-  },
-  isNew: {
-    type: Boolean,
-    default: true,
-  },
-  tags: [{
-    type: String,
-  }],
 }, { timestamps: true });
 
 const Product = mongoose.model('Product', productSchema);

@@ -250,25 +250,34 @@ const OrderDetailPage = () => {
 
             <div className="divide-y divide-gray-100 space-y-4">
               {order.items.map((item) => {
-                if (!item.productId) return null;
                 const product = item.productId;
+                const name = product ? product.name : item.name;
+                const slug = product ? product.slug : item.slug;
                 return (
-                  <div key={item._id || product._id} className="flex items-center space-x-6 pt-4 first:pt-0">
-                    <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100">
-                      <img
-                        src={getImageUrl(product.images)}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                  <div key={item._id} className="flex items-center space-x-6 pt-4 first:pt-0">
+                    {product && product.images && product.images.length > 0 && (
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100">
+                        <img
+                          src={getImageUrl(product.images)}
+                          alt={name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                     <div className="flex-grow min-w-0">
-                      <Link 
-                        to={`/products/${product._id}`} 
-                        className="font-bold text-gray-900 text-base hover:text-red-500 transition-colors truncate block"
-                      >
-                        {product.name}
-                      </Link>
-                      <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider">Sneaker</p>
+                      {product ? (
+                        <Link 
+                          to={`/products/${product._id}`} 
+                          className="font-bold text-gray-900 text-base hover:text-red-500 transition-colors truncate block"
+                        >
+                          {name}
+                        </Link>
+                      ) : (
+                        <div className="font-bold text-gray-900 text-base truncate">
+                          {name} <span className="text-xs font-normal text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full ml-2">Đã ngừng kinh doanh</span>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1 font-mono">Slug: {slug}</p>
                       
                       <div className="flex items-center justify-between mt-2.5">
                         <span className="text-sm font-medium text-gray-500">

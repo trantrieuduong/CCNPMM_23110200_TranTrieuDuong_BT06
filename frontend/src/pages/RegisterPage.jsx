@@ -38,7 +38,7 @@ const RegisterPage = () => {
         email: formData.email,
         password: formData.password
       }, { withCredentials: true });
-      navigate('/login');
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       setError(error.response?.data?.message || 'Đăng ký thất bại');
     } finally {

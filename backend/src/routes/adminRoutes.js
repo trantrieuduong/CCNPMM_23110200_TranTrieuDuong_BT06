@@ -5,13 +5,16 @@ const {
   toggleUserStatus,
   getAllOrders,
   updateOrderStatus,
-  handleCancellationRequest
+  handleCancellationRequest,
+  getDashboardStats
 } = require('../controllers/adminController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Tất cả các route admin đều yêu cầu đăng nhập và quyền admin
 router.use(protect);
 router.use(adminOnly);
+
+router.get('/stats', getDashboardStats);
 
 router.get('/users', getAllUsers);
 router.patch('/users/:id/toggle-status', toggleUserStatus);

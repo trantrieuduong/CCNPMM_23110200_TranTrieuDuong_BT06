@@ -1,0 +1,714 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "SNEAKERLAB E-Commerce API",
+    "version": "1.0.0",
+    "description": "Tài liệu đặc tả toàn bộ các endpoints API của hệ thống thương mại điện tử SNEAKERLAB, bao gồm Xác thực, Quản lý người dùng, Sổ địa chỉ, Sản phẩm, Danh mục, Giỏ hàng và Đơn hàng. Bạn có thể bấm nút **Authorize** bên dưới, dán JWT Token để test thử các API bảo mật trực tiếp."
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Local API Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Nhập JWT Access Token của bạn theo định dạng: `Bearer <token>`"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["user", "admin"] },
+          "isActive": { "type": "boolean" },
+          "addresses": { "type": "array", "items": { "$ref": "#/components/schemas/UserAddress" } }
+        }
+      },
+      "UserAddress": {
+        "type": "object",
+        "required": ["fullName", "phoneNumber", "address"],
+        "properties": {
+          "_id": { "type": "string" },
+          "fullName": { "type": "string", "example": "Nguyễn Văn A" },
+          "phoneNumber": { "type": "string", "example": "0912345678" },
+          "address": { "type": "string", "example": "123 Đường Lê Lợi, Quận 1, TP. HCM" },
+          "isDefault": { "type": "boolean", "default": false }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string", "example": "Adidas Ultraboost Light" },
+          "slug": { "type": "string" },
+          "price": { "type": "number", "example": 4500000 },
+          "discountPrice": { "type": "number", "example": 3800000 },
+          "description": { "type": "string" },
+          "images": { "type": "array", "items": { "type": "string" } },
+          "stock": { "type": "integer", "example": 10 },
+          "category": { "type": "string", "description": "Category ID" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string", "example": "Adidas" },
+          "slug": { "type": "string", "example": "adidas" }
+        }
+      },
+      "Cart": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": { "$ref": "#/components/schemas/Product" },
+                "quantity": { "type": "integer", "example": 1 }
+              }
+            }
+          },
+          "totalItems": { "type": "integer" },
+          "totalPrice": { "type": "number" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "userId": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": { "type": "string" },
+                "quantity": { "type": "integer" },
+                "price": { "type": "number" },
+                "name": { "type": "string" },
+                "slug": { "type": "string" }
+              }
+            }
+          },
+          "shippingAddress": {
+            "type": "object",
+            "properties": {
+              "fullName": { "type": "string" },
+              "phoneNumber": { "type": "string" },
+              "address": { "type": "string" }
+            }
+          },
+          "totalPrice": { "type": "number" },
+          "shippingCost": { "type": "number" },
+          "status": { "type": "string", "enum": ["pending", "confirmed", "shipped", "delivered", "cancelled"] },
+          "createdAt": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng ký tài khoản mới (cần xác thực Email)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string", "example": "Nguyễn Văn A" },
+                  "email": { "type": "string", "example": "test@example.com" },
+                  "password": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đăng ký thành công, mã OTP đã gửi đến email."
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng nhập người dùng",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "test@example.com" },
+                  "password": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng nhập thành công, trả về Access Token."
+          }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Xác thực OTP kích hoạt tài khoản",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "otp"],
+                "properties": {
+                  "email": { "type": "string", "example": "test@example.com" },
+                  "otp": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kích hoạt và đăng nhập thành công."
+          }
+        }
+      }
+    },
+    "/auth/resend-verify-otp": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Gửi lại mã OTP kích hoạt Email",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "example": "test@example.com" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đã gửi lại mã OTP thành công."
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Yêu cầu khôi phục mật khẩu (Gửi OTP)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "example": "test@example.com" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mã OTP khôi phục đã gửi."
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Xác thực OTP và đặt lại mật khẩu mới",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "otp", "newPassword"],
+                "properties": {
+                  "email": { "type": "string", "example": "test@example.com" },
+                  "otp": { "type": "string", "example": "123456" },
+                  "newPassword": { "type": "string", "example": "newpass123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đặt lại mật khẩu thành công."
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Làm mới Access Token (Rotate Refresh Token)",
+        "responses": {
+          "200": {
+            "description": "Trả về Access Token mới."
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng xuất tài khoản",
+        "responses": {
+          "200": {
+            "description": "Đăng xuất thành công."
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": ["User Profile"],
+        "summary": "Lấy thông tin tài khoản hiện tại",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Thông tin cá nhân.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/profile": {
+      "put": {
+        "tags": ["User Profile"],
+        "summary": "Cập nhật thông tin cá nhân (Cần OTP nếu thay đổi email)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Nguyễn Văn A" },
+                  "email": { "type": "string", "example": "newemail@example.com" },
+                  "otp": { "type": "string", "example": "123456", "description": "Bắt buộc nếu thay đổi email" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật thành công."
+          }
+        }
+      }
+    },
+    "/users/change-email-otp": {
+      "post": {
+        "tags": ["User Profile"],
+        "summary": "Yêu cầu mã OTP thay đổi email mới",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["newEmail"],
+                "properties": {
+                  "newEmail": { "type": "string", "example": "newemail@example.com" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đã gửi OTP đến email mới."
+          }
+        }
+      }
+    },
+    "/users/addresses": {
+      "get": {
+        "tags": ["Address Book"],
+        "summary": "Lấy danh sách địa chỉ giao hàng đã lưu",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Mảng các địa chỉ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UserAddress" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Address Book"],
+        "summary": "Thêm địa chỉ giao hàng mới",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fullName", "phoneNumber", "address"],
+                "properties": {
+                  "fullName": { "type": "string", "example": "Nguyễn Văn A" },
+                  "phoneNumber": { "type": "string", "example": "0912345678" },
+                  "address": { "type": "string", "example": "123 Lê Lợi, Q.1, HCM" },
+                  "isDefault": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thêm thành công, trả về mảng địa chỉ mới."
+          }
+        }
+      }
+    },
+    "/users/addresses/{addressId}": {
+      "put": {
+        "tags": ["Address Book"],
+        "summary": "Cập nhật thông tin địa chỉ đã lưu",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": { "type": "string" },
+                  "phoneNumber": { "type": "string" },
+                  "address": { "type": "string" },
+                  "isDefault": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật thành công."
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Address Book"],
+        "summary": "Xóa địa chỉ giao hàng",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa thành công."
+          }
+        }
+      }
+    },
+    "/users/addresses/{addressId}/default": {
+      "patch": {
+        "tags": ["Address Book"],
+        "summary": "Đặt địa chỉ giao hàng làm mặc định",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thiết lập mặc định thành công."
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Lấy danh sách sản phẩm (Tìm kiếm, phân mục, lọc, phân trang)",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Tìm kiếm theo tên hoặc slug",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Lọc theo Category ID",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Trang hiện tại",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Số sản phẩm mỗi trang",
+            "schema": { "type": "integer", "default": 8 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách sản phẩm.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": { "type": "integer" },
+                        "limit": { "type": "integer" },
+                        "total": { "type": "integer" },
+                        "pages": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Xem chi tiết một sản phẩm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chi tiết sản phẩm.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Product" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Lấy danh sách các danh mục",
+        "responses": {
+          "200": {
+            "description": "Mảng danh mục.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Category" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cart": {
+      "get": {
+        "tags": ["Cart"],
+        "summary": "Xem giỏ hàng hiện tại",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Thông tin giỏ hàng.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Cart" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Cart"],
+        "summary": "Thêm sản phẩm vào giỏ hàng",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["productId", "quantity"],
+                "properties": {
+                  "productId": { "type": "string", "example": "productId123" },
+                  "quantity": { "type": "integer", "example": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Giỏ hàng sau khi thêm."
+          }
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Tạo đơn đặt hàng mới",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["shippingAddress"],
+                "properties": {
+                  "shippingAddress": {
+                    "type": "object",
+                    "required": ["fullName", "phoneNumber", "address"],
+                    "properties": {
+                      "fullName": { "type": "string" },
+                      "phoneNumber": { "type": "string" },
+                      "address": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo đơn hàng thành công.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Lấy lịch sử mua hàng của người dùng",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Mảng các đơn hàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Order" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Xem chi tiết một đơn đặt hàng (bao gồm snapshot thông tin sản phẩm)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chi tiết đơn hàng.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

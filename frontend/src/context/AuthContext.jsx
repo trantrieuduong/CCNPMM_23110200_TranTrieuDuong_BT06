@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (userData) => {
     try {
-      const { data } = await api.put('/auth/profile', userData);
+      const { data } = await api.put('/users/profile', userData);
       
       const updatedData = {
         ...user,
@@ -65,6 +65,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       localStorage.removeItem('userInfo');
       setUser(null);
+      window.location.href = '/';
     }
   };
 

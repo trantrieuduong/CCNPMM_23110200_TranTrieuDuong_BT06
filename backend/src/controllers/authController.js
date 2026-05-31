@@ -10,13 +10,9 @@ exports.register = async (req, res, next) => {
 
     const result = await authService.register({ name, email, password });
 
-    // Thiết lập refresh token vào cookie
-    setRefreshTokenCookie(res, result.refreshToken);
-
     res.status(201).json({
       success: true,
-      message: 'Đăng ký tài khoản thành công',
-      accessToken: result.accessToken,
+      message: result.message,
       data: result.user,
     });
   } catch (error) {
@@ -47,23 +43,73 @@ exports.login = async (req, res, next) => {
   }
 };
 
-// @desc    Lấy thông tin người dùng hiện tại
-// @route   GET /api/auth/me
-// @access  Private
-exports.getMe = async (req, res, next) => {
+// @desc    Xác thực email đăng ký bằng OTP
+// @route   POST /api/auth/verify-email
+// @access  Public
+exports.verifyEmail = async (req, res, next) => {
   try {
-    const user = await authService.getMe(req.user.id);
-    
+    const { email, otp } = req.body;
+    const result = await authService.verifyEmail(email, otp);
+
+    // Xác thực thành công thì set cookie đăng nhập luôn cho người dùng
+    setRefreshTokenCookie(res, result.refreshToken);
+
     res.json({
       success: true,
-      message: 'Lấy thông tin người dùng thành công',
-      data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-      },
+      message: 'Xác thực địa chỉ email và kích hoạt tài khoản thành công',
+      accessToken: result.accessToken,
+      data: result.user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Gửi lại mã OTP kích hoạt email
+// @route   POST /api/auth/resend-verify-otp
+// @access  Public
+exports.resendVerifyOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await authService.resendVerifyOTP(email);
+
+    res.json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Yêu cầu đặt lại mật khẩu (quên mật khẩu)
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await authService.forgotPassword(email);
+
+    res.json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Xác thực OTP và đặt lại mật khẩu mới
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const result = await authService.resetPassword(email, otp, newPassword);
+
+    res.json({
+      success: true,
+      message: result.message
     });
   } catch (error) {
     next(error);
@@ -99,23 +145,6 @@ exports.logout = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Đăng xuất thành công',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Cập nhật thông tin cá nhân
-// @route   PUT /api/auth/profile
-// @access  Private
-exports.updateProfile = async (req, res, next) => {
-  try {
-    const result = await authService.updateProfile(req.user.id, req.body);
-    
-    res.json({
-      success: true,
-      message: 'Cập nhật thông tin cá nhân thành công',
-      data: result,
     });
   } catch (error) {
     next(error);

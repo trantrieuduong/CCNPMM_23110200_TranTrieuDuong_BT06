@@ -11,7 +11,10 @@ class ProductService {
     const query = {};
 
     if (search) {
-      query.name = { $regex: search, $options: 'i' };
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { slug: { $regex: search, $options: 'i' } }
+      ];
     }
 
     if (category) {

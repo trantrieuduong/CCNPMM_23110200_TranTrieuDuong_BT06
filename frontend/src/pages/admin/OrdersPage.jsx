@@ -519,22 +519,27 @@ const OrdersPage = () => {
               </h4>
               <div className="divide-y divide-gray-100 space-y-3">
                 {selectedOrder.items.map((item) => {
-                  if (!item.productId) return null;
                   const p = item.productId;
+                  const name = p ? p.name : item.name;
+                  const slug = p ? p.slug : item.slug;
                   return (
                     <div key={item._id} className="flex items-center justify-between pt-3 first:pt-0">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50">
-                          <img
-                            src={getImageUrl(p.images)}
-                            alt={p.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                        {p && p.images && p.images.length > 0 && (
+                          <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50">
+                            <img
+                              src={getImageUrl(p.images)}
+                              alt={name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                         <div>
-                          <p className="font-bold text-gray-800 text-xs sm:text-sm">{p.name}</p>
+                          <p className="font-bold text-gray-800 text-xs sm:text-sm">
+                            {name} {!p && <span className="text-[10px] font-normal text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-full ml-1">Đã ngừng kinh doanh</span>}
+                          </p>
                           <p className="text-[11px] text-gray-400 mt-0.5">
-                            Giá đặt: {item.price.toLocaleString('vi-VN')}₫ | Trong kho còn: {p.stock}
+                            Giá đặt: {item.price.toLocaleString('vi-VN')}₫ {p ? `| Trong kho còn: ${p.stock}` : `| Slug: ${slug}`}
                           </p>
                         </div>
                       </div>

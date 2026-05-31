@@ -4,7 +4,7 @@ class CartRepository {
   async findByUserId(userId) {
     return await Cart.findOne({ userId }).populate({
       path: 'items.productId',
-      select: 'name slug price discountPrice images stock isNew'
+      select: 'name slug price discountPrice images stock'
     });
   }
 

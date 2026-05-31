@@ -32,6 +32,8 @@ class OrderService {
       const price = product.discountPrice > 0 ? product.discountPrice : product.price;
       orderItems.push({
         productId: product._id,
+        name: product.name,
+        slug: product.slug,
         quantity: item.quantity,
         price: price,
       });
